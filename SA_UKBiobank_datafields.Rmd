@@ -1,0 +1,212 @@
+---
+title: |
+ | Report
+ | Phenotype definition of severe asthma in UK Biobank
+ | Step 1 - Overview of available data
+author: "Noemi-Nicole Piga"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    code_folding: "hide"
+    toc: true
+    toc_float: true
+    theme: united
+---
+
+# Rationale
+Collection and primary descriptive analysis of information on asthma and severe asthma in UK Biobank using electronic health records (EHRs) and additional available data.
+<br>
+
+I will use the following EHRs:
+
+* self-reported medication (Data-Field 20003)
+* hospital inpatient record - diagnosis (Category 2002) 
+* primary care record - presciption (Data-Field 42039)
+
+The additional data are:
+
+* withdrawn participants (untill August 2021)
+* age
+* age2 (concept that illness are not linear but exponentially correlated to disease)
+* age onset
+* sex
+* ancestry
+* BMI index (obesity)
+* death
+* family_history (for asthma)
+* exacerbation
+* lung function	
+* smoking status
+* pack_per_year
+* smoking status
+<br>
+
+! [Alt text] (/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/data/Medication_analysis.png)
+
+```{r, setup}
+library(reticulate)
+#py_install("pandas")
+#py_install("numpy")
+#py_install("matplotlib.pyplot") does not run !
+
+# To run this .rmd file:
+#export PATH=${PATH}:/cm/shared/apps/R/deps/rstudio/bin/pandoc
+#file="./SA_UKBiobank_datafields.Rmd" 
+#module load R
+#Rscript -e 'rmarkdown::render("'$file'")'
+```
+
+# Initial exploration of data
+
+## Sample data
+The sample data are related to participants for application 56607 (severe asthma project).
+<br>
+We can have a look at it:
+
+```{python, eval=FALSE}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+##SAMPLE FILE
+#load sample file
+sample_file = "/data/gen1/UKBiobank_500K/severe_asthma/data/ukbiobank_master_app56607.sample"
+sample = pd.read_csv(sample_file,sep=" ", index_col = False, header = 0)
+
+#extract app648_ids app56607_ids columns for merging with EHRs:
+sample_ids = sample[['app648_ids','app56607_ids']]
+```
+
+## Self-reported medication
+```{python, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/SA_UKBiobank_datafields_analysis_selfreported_medication.py'), eval=FALSE}
+```
+
+## Hospital inpatient record
+```{python, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/SA_UKBiobank_datafields_analysis_hospitalisation.py'), eval=FALSE}
+```
+
+## Primary care record (prescription)
+Primary care data are available for 45% (~230,000 participants) of the total biobank. For this reason, and for all the other caveats described below, primary care data in UK Biobank cannot be used to represent the whole cohort and I should validated them carefully in order to avoid misleading and biased conclusions.
+<br>
+A.There are three main files:
+
+ * gp_clinical.txt : about diagnosis, history, symptoms, etc.
+
+ * gp_scripts.txt : about prescription (NB: they can be prescribed but not taken by the participants)
+
+ * gp_registrations.txt : about admin information, referrals to specialists
+
+B.There are 3 diferrent types of drug coding system:
+
+ * Read Code: Readv2 and/or Readv3 (CTV3) for clinical terms. Deprecated by SNOMED CT since 2018, but used here in UK Biobank
+
+ * BNF: British National Formulary: list of medicine, dressings and appliance prescribed in UK within the NHS system. BNF codes vary according to the suppliers. Maximum number of character is 15 and each indentify a characteristic of the compound. See Table3 of https://biobank.ndph.ox.ac.uk/ukb/ukb/docs/primary_care_data.pdf
+
+ * dm+d: Dictionary of Medicine and Devices was developed by NHS from primary and secodary care data. Such dictionary has unique identifier for specific medicine and device. It has 5 components
+
+	- VTM (virtual therapeutic moiety), VMP (virtual medicinal product), VMPP (virtual medicinal product pack) use the generic name of the medication/device; AMP (actual medicinal product) and AMPP (actual medicinal product pack) use the brand name.
+
+C.Four general practices computer system collected with a preferable coding system:
+
+ * England (Vision) used Read v2 and/or dm+d
+
+ * Scotland used Read v2 and/or BNF
+
+ * England (TPP) used BNF
+
+ * Wales used Read v2
+
+This collection of data is prone to biases. Some data quality controls can be made, as suggested by UK Biobank (https://biobank.ndph.ox.ac.uk/ukb/ukb/docs/primary_care_data.pdf):
+<br>
+
+ * check on duplicated info, such as same patient registered twice due to change of general practice and therefore computer system provider
+
+ * wrong info, dates or codes enter incorrectly
+
+ * inconsistent info, variation of timing or content of records between different sources
+
+ * data gaps, absent or suppression or variation in completness of available data
+
+Each computer system has an extract date (month-year) after which the records number are very low. Such date is used as a cut-off for reliabe data. 
+<br>
+Further, there is an issue with the death date as recorded in UK Biobank: ~3% of Wales and Scottish, and ~500 people for England present the chosen cut-off data after their death data. So, I should flag and exclude these participants.
+<br>
+Finally, in order to protect participants, conventional dates were given according to birthday date and prescription/clinical event data: if birthday prior to prescription/clinical event date, changed to 01/01/1901; if same date, changed to 02/02/1902; if birthday date and prescription/clinical event date in same year, changed to 03/03/1903; if there was a date in the future, changed to 07/07/2037.
+
+For our aim, I used the gp_scripts.txt file to retrieve participants with at least one prescription data on asthma and severe asthma medication.
+<br>
+As starting point, I used:
+
+ * Lists of medication for asthma and moderate-severe asthma derived from the Lancet Paper (the same used in the self-reported data analysis) 
+	- asthma: "/data/gen1/UKBiobank_500K/severe_asthma/data/Codes_for_asthma_diagnosis.txt" 
+	- only mederate-severe asthma: "/data/gen1/UKBiobank_500K/severe_asthma/data/Codes_for_severe_asthma_diagnosis.txt"
+ * List Read v2 code for asthma drugs prescription as in UK Biobank Resource 592 (see description below)
+
+Here a brief explation of the 2 UK Biobank Resource:
+
+ * Resource 592 : contains look-ups for clinical and prescription coding systems and mappings between the different coding systems. Data in a .xlsx file and description in a .pdf file
+
+
+I implemented this analysis as follow:
+<br>
+I used the drugs name in the two list of asthma medication as key word to do a filter of the 'drug name' column and retrieve all the prescriptions with this drug name and to find the read v2 and dm+d code associated with each drug name.
+<br>
+For all the record with a read v2 or a dm+d code, I then used the code. For records with only the drug name, I used the key word from the list of asthma medication.
+<br>
+I decide not to use BNF code directly since the gp_scripts.txt file reports truncated and malformatting BNF, not comparable with the standard version, and they would have led to bias.
+<br>
+Here, a graphical representation of the analysis workflow:
+! [Alt text] ('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/data/primary_care_analysis.png')
+
+
+```{bash, eval=FALSE, engine="sh"}
+#Resource 592:
+wget  -nd  biobank.ndph.ox.ac.uk/ukb/ukb/auxdata/primarycare_codings.zip
+unzip primarycare_codings.zip
+
+#Rescource 594: Maybe useulf for gp_clinical.txt
+wget  -nd  biobank.ndph.ox.ac.uk/ukb/ukb/auxdata/algorithm_outcome_codes.xlsx
+```
+
+```{python, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/SA_UKBiobank_datafields_analysis_primary_care.py'), eval=FALSE}
+```
+```{bash, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/SA_UKBiobank_datafields_analysis_primary_care.sh'), eval=FALSE}
+```
+
+## Additional information
+
+### death
+Data-Field 40000
+
+### withdrawn participants (untill August 2021)
+
+### smoking status
+
+### pack_per_year
+
+### age
+
+### age2 (concept that illness are not linear but exponentially correlated to disease)
+
+### age onset
+Data-Field 3786
+```{bash,eval=FALSE}
+awk -F'","' {'print $1, $488, $489, $490, $491'} ${PATH_DATA}/ukb48371.csv | sed s/[\"]//g > ${PATH_DATA}/asthma_ageonset_378600_378610_378620_378630.txt
+```
+
+### sex
+
+### BMI index (obesity)
+
+### family_history (for asthma)
+
+### exacerbation
+
+### lung function
+FEV1, FVC, ratio FEV1/FVC
+According to [GINA](https://ginasthma.org/wp-content/uploads/2021/05/GINA-Main-Report-2021-V2-WMS.pdf),
+a low percent predicted FEV1 (FEV1 < 60%) suggests risk of asthma exacerbation independent of symptoms levels.
+
+## Creation of the Master Table
+Collating together into a unique table
+{bash, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/SA_UKBiobank_datafields_create_MasterTable.sh'), eval=FALSE

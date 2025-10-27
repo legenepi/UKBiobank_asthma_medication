@@ -1,0 +1,39 @@
+---
+title: |
+ | Analysis Report
+ | List of asthma medications in primary care prescriptions and in self-reported medications
+ | -
+ | Differentiate in 'all asthma', 'mild', 'mild-moderate' and 'severe' disease
+author: "Noemi-Nicole Piga"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    code_folding: "hide"
+    toc: true
+    toc_float: true
+    theme: united
+---
+
+```{r, setup, hide = TRUE}
+library(reticulate)
+
+# To run this .rmd file:
+#be in the folder with the .Rmd file
+#export PATH=${PATH}:/cm/shared/apps/R/deps/rstudio/bin/pandoc
+#file="./Mike_Medication_list.Rmd"
+#module load R
+#Rscript -e 'rmarkdown::render("'$file'")'
+```
+
+# Rationale
+Use the list of asthma medication from primary care prescription found by Mike to divided participants with diagnosed asthma
+and a primary care prescription for asthma into 'all asthma', 'mild', 'mild-moderate' and 'severe' disease.
+Compare this list with the list of medication from self-reported medications (data field 20003) used in the Lancet Paper
+and try to divide this medication into the four disease group as well.
+
+# Analysis
+Code: Medication_list.sh; Asthma_meds_severity.R
+```{bash, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/Asthma_meds_severity.R'), eval=FALSE}
+```
+```{bash, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/Asthma_meds_severity.R'), eval=FALSE}
+```

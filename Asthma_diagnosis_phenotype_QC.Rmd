@@ -1,0 +1,187 @@
+---
+title: "Asthma diagnosis phenotype quality control analysis"
+author: "Noemi Nicole Piga"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    code_folding: "hide"
+    toc: true
+    toc_float: true
+    theme: united
+---
+
+
+```{r, setup, hide = TRUE}
+library(reticulate)
+
+# To run this .rmd file:
+#be in the folder with the .Rmd file
+#export PATH=${PATH}:/cm/shared/apps/R/deps/rstudio/bin/pandoc
+#file="./Asthma_diagnosis_phenotype_QC.Rmd"
+#module load R
+#Rscript -e 'rmarkdown::render("'$file'")'
+```
+
+# Rationale
+Quality control checks to validate the goodness of the asthma diagnosis phenotype workflow.
+
+# Analysis
+Code: Asthma_diagnosis_QC.sh
+```{bash, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/Asthma_diagnosis_QC.sh'), eval=FALSE}
+```
+
+## Delete emphysema/chronic bronchitis participants
+Code: emphysema_chronicbronchitis_diagnosis.sh; Comparison_asthma_phenotypes.r
+```{bash, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/emphysema_chronicbronchitis_diagnosis.sh'), eval=FALSE}
+```
+```{r, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/Comparison_asthma_phenotypes.r'), eval=FALSE}
+```
+### Create emphysema/chronic bronchitis diagnosis phenotype
+Apply the same method I used to create asthma diagnosis phenotype. So, I am going to use:
+
+1. self-reported doctor diagnosed emphysema/chronic bronchitis in Data-Fields 6152;
+2. self-reported doctor diagnosed emphysema in Data-Fields 22128;
+3. self-reported doctor diagnosed chronic bronchitis in Data-Fields 22129;
+4. primary care clinical records for asthma looking at Readv2 and ReadCTV3 codes in Category 3000 ('gp_clinical.txt');
+5. hospitalisation data diagnosis for asthma looking at ICD-10 and/or ICD-9 codes (distinguish between all-level1-level2) in Category 2000 ('hesin_diag.txt');
+6. primary cause of deaths for asthma looking at ICD-10 code in fields 40001;
+7. secondary cause of deaths for asthma looking at ICD-10 code in fields 40002
+
+ICD-9 codes for emphysema/chronic bronchitis : 491, 492
+ICD-10 codes for emphysema/chronic bronchitis: J43, J40,J41,J42
+
+## Clinical codes check
+
+### Comparison clinical codes with Richard Packer's ones
+Code: asthma_ecb_diagnosis_RP_clinicalcodes.sh; comparison_clinical_codes_RP.r; comparison_parts.R
+```{r, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/asthma_ecb_diagnosis_RP_clinicalcodes.sh'), eval=FALSE}
+```
+```{r, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/comparison_clinical_codes_RP.R'), eval=FALSE}
+```
+```{r, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/comparison_parts.R'), eval=FALSE}
+```
+I compared my clinical codes (Readv2, ReadCTV3, ICD9, ICD10) with Richard Packer's ones. Both for asthma and emphysema/
+chronic bronchitis. For the latter, I used the clinical codes for COPD as an union of codes for emphysema/chronic bronchitis.
+<br>
+I implemented two analyses: a) I compared the clinical codes found by the two methods; b) Compare the participants with
+diagnosed asthma and/or emphysema/chronic bronchitis using mine and Richard Packer's clinical codes.
+
+### Readv2 and ReadCTV3 from data-coding 1834, 1835
+Use resource from UK Biobank for both readv2 and readCTV3 codes mapped to ICD-10 codes:
+
+ * data-coding 1834, readv2 into ICD-10;
+ * data-coding 1835, readCTV3 into ICD-10
+
+This clinical codes are retrieved mapping ICD-10 code only. In my analysis, I used both ICD-10 and ICD-9. Therefore,
+it is not really comparable my analysis with these two fields. More, for asthma, I used the clinical code available
+from the resource 'algorithm_outcome_codes.xlsx' table 'Asthma - P2' provided by UK Biobank. I then skipped this analysis
+because not informative.
+
+## Comparison with amalgamated asthma phenotype definition form Data-Fields 131495 and 131497
+Data-field 131495 and 131497 use [data-coding 2171](https://biobank.ndph.ox.ac.uk/showcase/coding.cgi?id=2171).
+These fields represent:
+
+ * Data-Field 131495: 'Source of the first code mapped to 3-character ICD10 J45, and whether this code occurs in other source(s) with the same or a later event date. The code corresponds to "asthma".';
+
+ * Data-Field 131497: 'Source of the first code mapped to 3-character ICD10 J46, and whether this code occurs in other source(s) with the same or a later event date. The code corresponds to "status asthmaticus".'
+
+<br>
+I cannot actually compare my number of participants for asthma diagnosis phenotype with theirs because UK Biobank made three analysis decisions
+that I did not: looking at the date of the diagnosis, reporting the record in each category if it was the first diagnosis ever reported,
+using Data-Field 20002 for self-reported asthma. Therefore, it is expected that my number of asthma diagnosed participant differs from theirs.
+
+### Focus on hospitalisation inpatient data check
+I have a high number of participants with an ICD-10/9 code for asthma in hospitalisation inpatient data.
+I compare participants with hospitalisation data source as found by data-field 191495 (J45) and 191497 (J47) which
+are amalgamated phenotype definition for asthma from 4 sources: Hospital in-patient records (ICD10 and ICD9);
+Death records (ICD10); Primary care records (Read v2 and Read CTV3); Self-report ('Data-Field 20002 using mapping between
+all reported diagnosed contribution to the 3-character ICD10 codes where appropriate';
+[see Resource593](https://biobank.ndph.ox.ac.uk/showcase/refer.cgi?id=593))
+<br>
+Since this definition makes use of the diagnosis date while my asthma diagnosis definition does not, I cannot properly
+compare my number of participants with hospitalisation record with theirs. In addition, they report a reduced number of participants
+in the category 40 and 41, presumably because the hospitalisation would happen after a diagnosis of asthma firstly
+reported in primary care data.
+With my definition of asthma diagnosis, I retrieve 46308 participants with an asthma ICD-9 or 10 code in hospitalisation
+record. The vast majority show an asthma code as a secondary cause for hospitalisation (45497), and 4021 participants show
+asthma code as primary cause of hospitalisation. Overall, they represent the 10.5% of all participants with hospitalisation records
+which is in line with the prevalence of asthma in the general UK population (~10% in the period 2008-2012) ( [NICE](https://cks.nice.org.uk/topics/asthma/background-information/prevalence/#:~:text=In%20the%20UK%2C%20over%208,have%20been%20diagnosed%20with%20asthma.))
+
+
+# Results
+## Delete emphysema/chronic bronchitis participants
+
+## Clinical codes check
+### Comparison clinical codes with Richard Packer's ones
+#### Asthma
+Total number of participants with Richard Packer's asthma clinical code is 150388, against the 80187 participants found
+by my analysis. The datafield 20002 (self-reported asthma) adds 1260 participants not found by the other two datafield with
+self-reported asthma (6125, 22127). Regarding clinical records, Richard Packer's clinical codes retrieved more
+than the double of the participants I found (88411 against 29373). Hospital records show 67488 against 46308,
+Richard Packer and my analysis respectively. Regarding primary and secondary death data, all the participants found
+by my analysis are also found with Richard Packer's clinical code.
+```{r, echo = FALSE}
+xfun::embed_file("/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/data/asthma_RP_comparison_parts_venndiagram.pdf")
+```
+```{r, out.width='45%', fig.align='center', fig.cap= 'Venn diagram comparison participants - asthma', echo = FALSE}
+knitr::include_graphics('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/data/asthma_RP_comparison_parts_venndiagram.png')
+```
+
+```{r, echo = FALSE}
+xfun::embed_file("/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/data/asthma_clinical_codes_RP_venndiagram.pdf")
+```
+```{r, out.width='45%', fig.align='center', fig.cap= 'Venn diagram comparison clinical codes - asthma', echo = FALSE}
+knitr::include_graphics('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/data/asthma_clinical_codes_RP_venndiagram.png')
+```
+#### Emphysema/Chronic bronchitis
+Total number of participants with Richard Packer’s COPD clinical code is 32661, against the 16101 participants found
+by my analysis. The datafield 20002 (self-reported asthma) adds 2134 participants not found by the other three datafields
+(6125, 22128, 22129).
+Regarding clinical records, Richard Packer's clinical codes retrieved 8258 participants against 4199. Hospital records show
+25643 against 1810, Richard Packer and my analysis respectively. Regarding primary and secondary death data, all the participants found
+by my analysis are also found with Richard Packer's clinical code except 3 individuals.
+```{r, echo = FALSE}
+xfun::embed_file("/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/data/ecb_RP_comparison_parts_venndiagram.pdf")
+```
+```{r, out.width='45%', fig.align='center', fig.cap='Venn diagram comparison participants - ecb', echo = FALSE}
+knitr::include_graphics('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/data/ecb_RP_comparison_parts_venndiagram.png')
+```
+
+```{r, echo = FALSE}
+xfun::embed_file("/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/data/ecb_clinical_codes_RP_venndiagram.pdf")
+```
+```{r, out.width='45%', fig.align='center', fig.cap='Venn diagram comparison clinical codes - ecb', echo = FALSE}
+knitr::include_graphics('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/data/ecb_clinical_codes_RP_venndiagram.png')
+```
+
+### Readv2 and ReadCTV3 from data-coding 1834, 1835
+Data-coding 1834 and 1835 are based on ICD-10 only. I obtained
+
+#### Observation: missing formatting in Readv2 and ReadCTV3 look-up table brought to a wrong code (00) in  my analysis
+While checking for data-coding 1834 and 1835, I spotted a wrong code ('00') in the file 'ReadCTV3_Asthma_codes'. The problem
+was due to the presence of the comma both as separator and as character in some column of the table 'read_v2_read_ctv3'
+in the file 'all_lkps_maps_v3.xlsx'. Such code is a Readv2 for asthma, and it was retrieved by the searching, but then it
+was uncorrectly reported as a ReadCTV3 due to mismatching of the column for the presence of the comma. Thus, I rewrote the
+command leaving the comma just as separator and '00' was not retrieved as readCTV3 code anymore. The total number of individuals
+with primary clinical code for asthma is now 29322 and the total number of participants with diagnosed asthma is 80138.
+The number of distinct drug names becomes 49099 (49129 previously) resulting in 48039 distinct drug name (48069 previously) after a first
+data cleaning (see [Medication_list.html](/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/Medication_list.Rmd)).
+From 15484539 prescriptions and 38866 participants to 15480824 prescriptions and 38822 participants.
+Genotyped individuals: with asthma diagnosis from 77651 to 77602; 15065507 prescriptions and 37846 participants to
+15061792 prescriptions and 37802 participants.
+
+
+# Conclusion
+
+## Actions for Richard Packer's clinical codes
+The number of participants retrieved by Richard Packer's codes is higher for both asthma and emphysema/chronic bronchitis.
+I am not sure this clinical codes retrieve teh actual number of asthma participants in UK Biobank.
+I will therefore use to define asthma the analysis and clinical codes as I implemented. I will exclude the participants found by
+Richard Packer's clinical codes -both asthma and emphysema/chronic bronchitis- from the control in order to be sure that I will take participants free from asthma.
+I could also run a sensitivity analysis using Richard Packer's asthma participants as case.
+
+
+# Notes
+
+# References
+

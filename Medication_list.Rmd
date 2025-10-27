@@ -1,0 +1,134 @@
+---
+title: |
+ | Analysis Report
+ | List of medications in primary care prescription for participants with diagnosed asthma
+author: "Noemi-Nicole Piga"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    code_folding: "hide"
+    toc: true
+    toc_float: true
+    theme: united
+---
+
+# Rationale
+Obtain the list of medications from primary care prescription record based on participants with diagnosed asthma as defined according different approaches.
+<br>
+<br>
+
+
+```{r, setup, hide = TRUE}
+library(reticulate)
+
+# To run this .rmd file:
+#export PATH=${PATH}:/cm/shared/apps/R/deps/rstudio/bin/pandoc
+#file="scripts/Medication_list.Rmd"
+#module load R
+#Rscript -e 'rmarkdown::render("'$file'")'
+```
+# Analysis
+
+## Find the participants with diagnosed asthma with the different approaches
+Code: create_dataset_for_medication_list.sh
+```{bash, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/create_dataset_for_medication_list.sh'), eval=FALSE}
+```
+The first important step is to exclude withdrawn participants (80 participants up to 22nd of February 2022).
+<br>
+Another important exclusion to be made is to filter out participants with self-reported emphysema/chronic bronchitis (*see 'Next steps' section).
+<br>
+Now, I can search for diagnosed asthma participants in UK Biobank using the following approaches:
+
+1. self-reported doctor diagnosed asthma in Data-Fields 6152;
+2. self-reported doctor diagnosed asthma in Data-Fields 22127;
+3. primary care clinical records for asthma looking at Readv2 and ReadCTV3 codes in Category 3000 ('gp_clinical.txt');
+4. hospitalisation data diagnosis for asthma looking at ICD-10 and/or ICD-9 codes (distinguish between all-level1-level2) in Category 2000 ('hesin_diag.txt');
+5. primary cause of deaths for asthma looking at ICD-10 code in fields 40001;
+6. secondary cause of deaths for asthma looking at ICD-10 code in fields 40002
+
+
+## Find participants with diagnosed asthma in primary care prescription and their list of medications
+Code: SA_UKBiobank_datafields_analysis_primary_care.sh; Medication_list.sh
+```{bash, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/SA_UKBiobank_datafields_analysis_primary_care.sh'), eval=FALSE}
+```
+```{bash, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/Medication_list.sh'), eval=FALSE}
+```
+
+I retrieve the participants with diagnosed asthma with primary care prescription records and obtain the medications based on drug name and readv2 code.
+<br>
+This list includes the name for all medications, not only asthma. I applied an initial data cleaning step to the list: removal of values starting with wildcard or double quote, search for unique and case insensitive values. I obtain a shorter list that I refer to as 'refined'.
+
+# Results
+Code: Comparison_asthma_diagnosis.r; Medication_list.sh (shown above)
+```{r, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/Comparison_asthma_diagnosis.r'), eval=FALSE}
+```
+
+## UpSet plot
+
+UpSet plot is a data visualisation tool that allows the representation of intersections between several datasets. In this case, I want to compare eight different datasets (
+```{r, echo=FALSE}
+xfun::embed_file("/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/output/UpSet_asthma_diagnosis.pdf", text = "UpSet_asthma_diagnosis.pdf")
+```
+). Looking at the plot, primary cause of death for asthma include 45 participant being the smallest dataset in this analysis, while selfrep 6251 shows the highest number of participants (59357). The biggest intersection is between self-reported doctor diagnosed asthma in fields 6152, hospitalisation all and level 2.
+
+
+## Venn diagram
+
+Venn diagram is a basic data visualisation tool, suitable when comparing two up to five dasets in general. In this case, I started from eight datasets and to reduce the number, I collated dataset with the same type of diagnosis. I then obtain a unique category for the self-reported doctor diagnosed asthma ('selfrep'), the cause of death ('cause_death'), and I use hospitalisation inpatient data for level 1 only ('HES_L1'), reducing the datasets to four.
+```{r, out.width='60%', fig.align='center', fig.cap='Venn diagram asthma diagnosis', echo = FALSE}
+knitr::include_graphics('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/output/Venn_asthma_diagnosis.png')
+```
+The combined self-reported and the primary care clinical data share the highest number of participants (19414).
+
+## Primary care prescription: participants and medications
+
+I found 38820 participants with diagnosed asthma in the primary care prescription. 
+<br>
+Their prescription records include 49099 distinct drug names and 7028 readv2 code associated with 7012 drug names. After a refinement of the drug name, I find 48039 distinct values. 
+
+This list of drug names for all medications is available at
+```{r, echo=FALSE}
+xfun::embed_file("/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/output/all_meds_asthma_diagnosis_gp_script.txt", text = "all_meds_asthma_diagnosis_gp_script.txt")
+```
+<br>
+The refined list of drug names for all medications is available at
+```{r, echo=FALSE}
+xfun::embed_file("/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/output/refined_all_meds_asthma_diagnosis_gp_script.txt", text = "refined_all_meds_asthma_diagnosis_gp_script.txt")
+```
+
+# Conclusion
+
+ * The number of participants with a diagnosis for asthma is 80132 including 38820 participants with primary care prescription showing 48039 distinct drug names.
+
+<br>
+Next steps:
+
+ * Send the list of 48069 medications to Mike to be filtered for asthma drugs only and subsequently divide them into severity types (severe, moderate-severe, moderate, mild);
+
+ * Identify participants with a diagnosis for emphysema/chronic bronchitis and/or COPD and filter them out;
+ 
+ * Firstly, identify severe participants according to medication list. Then, identify participants for the other asthma types' medication list.
+
+# Notes
+
+## Withdrawn participants
+Code: check_withdrawns.r
+```{r, code = readLines('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/scripts/check_withdrawns.r'), eval=FALSE}
+```
+I did a quality check among the withdrawn participants files we had received from UK Biobank for project 56607.
+<br> 
+Aim: to verify that the most updated file contains all the previous versions.
+
+We have received the following withdrawn participant files from UK Biobank:
+
+ * /rfs/TobinGroup/data/UKBiobank/application_56607/w56607_20210201.csv (4 eids);
+
+ * /rfs/TobinGroup/data/UKBiobank/application_56607/w56607_20210809.csv (33 eids);
+
+ * /rfs/TobinGroup/data/UKBiobank/application_56607/w56607_20220222.csv (79 eids);
+
+I use a venn diagram to represent this analysis:
+```{r, out.width='45%', fig.align='center', fig.cap='Venn diagram withdrawn participants', echo = FALSE}
+knitr::include_graphics('/home/n/nnp5/PhD/PhD_project/UKBiobank_datafields/output/venn_withdrawns.png')
+```
+As shown above, one participant is not included in the most updated list. I decide to exclude this eid from our analysis and I let UK Biobank know about this.
